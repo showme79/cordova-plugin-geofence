@@ -53,7 +53,7 @@ func log(_ messages: [String]) {
         
         if iOS8 {
             promptForNotificationPermission()
-            geoNotificationManager.registerPermissions()
+            // geoNotificationManager.registerPermissions()
         }
         geoNotificationManager.isActive = true
         geoNotificationManager.startUpdatingLocation()
@@ -269,7 +269,7 @@ class GeoNotificationManager : NSObject, CLLocationManagerDelegate, UNUserNotifi
         locationManager.desiredAccuracy = kCLLocationAccuracyBestForNavigation
         
         if iOS8 {
-            locationManager.requestAlwaysAuthorization()
+            // locationManager.requestAlwaysAuthorization()
         }
         
         if #available(iOS 10.0, *) {
