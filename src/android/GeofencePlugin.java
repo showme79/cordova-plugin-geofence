@@ -149,11 +149,13 @@ public class GeofencePlugin extends CordovaPlugin {
     }
 
     private void initialize(CallbackContext callbackContext) {
-        String[] permissions = {
-            Manifest.permission.ACCESS_COARSE_LOCATION,
-            Manifest.permission.ACCESS_FINE_LOCATION
-        };
-
+        ArrayList<String> permissionList = new ArrayList<String>();
+        permissionList.add(Manifest.permission.ACCESS_COARSE_LOCATION);
+        permissionList.add(Manifest.permission.ACCESS_FINE_LOCATION);
+        if (android.os.Build.VERSION.SDK_INT > 28) {
+            permissionList.add(Manifest.permission.ACCESS_BACKGROUND_LOCATION);
+        }
+        String[] permissions = permissionList.toArray(new String[0]);
         if (!hasPermissions(permissions)) {
             PermissionHelper.requestPermissions(this, 0, permissions);
         } else {
