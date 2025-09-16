@@ -343,9 +343,25 @@ class GeoNotificationManager : NSObject, CLLocationManagerDelegate, UNUserNotifi
             }
         }
         
-        if iOS8 {
+        if #available(iOS 10.0, *) {
+            UNUserNotificationCenter.current().getNotificationSettings { settings in
+                if settings.authorizationStatus != .authorized {
+                    errors.append("Error: notification permission missing")
+                } else {
+                    if settings.alertSetting != .enabled {
+                        warnings.append("Warning: notification settings - alert permission missing")
+                    }
+                    if settings.soundSetting != .enabled {
+                        warnings.append("Warning: notification settings - sound permission missing")
+                    }
+                    if settings.badgeSetting != .enabled {
+                        warnings.append("Warning: notification settings - badge permission missing")
+                    }
+                }
+            }
+        } else {
             if let notificationSettings = UIApplication.shared.currentUserNotificationSettings {
-                if notificationSettings.types == UIUserNotificationType() {
+                if notificationSettings.types == [] {
                     errors.append("Error: notification permission missing")
                 } else {
                     if !notificationSettings.types.contains(.sound) {
@@ -497,7 +513,7 @@ class GeoNotificationManager : NSObject, CLLocationManagerDelegate, UNUserNotifi
             if let text = geo["notification"]["text"] as JSON? {
                 content.body = text.stringValue
             }
-            content.sound = UNNotificationSound.default()
+            content.sound = UNNotificationSound.default
             if let json = geo["notification"]["data"] as JSON? {
                 content.userInfo = ["geofence.notification.data": json.rawString(String.Encoding.utf8.rawValue, options: [])!]
             }
