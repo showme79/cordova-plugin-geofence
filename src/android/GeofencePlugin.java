@@ -18,6 +18,7 @@ import org.apache.cordova.PluginResult;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.json.JSONTokener;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
@@ -130,22 +131,43 @@ public class GeofencePlugin extends CordovaPlugin {
     }
 
     private GeoNotification parseFromJSONObject(JSONObject object) {
-        GeoNotification geo = GeoNotification.fromJson(object.toString());
-        return geo;
+        if (object == null) {
+            return null;
+        }
+        try {
+            return GeoNotification.fromJson(object.toString());
+        } catch (RuntimeException e) {
+            Log.e(TAG, "Failed to parse GeoNotification JSON", e);
+            return null;
+        }
     }
 
     public static void onTransitionReceived(List<GeoNotification> notifications) {
         Log.d(TAG, "Transition Event Received!");
-        String js = "setTimeout('geofence.onTransitionReceived("
-            + Gson.get().toJson(notifications) + ")',0)";
-        sendJavascript(js);
+        String json = Gson.get().toJson(notifications);
+        sendJavascript(buildSafeCallbackJs("geofence.onTransitionReceived", json));
     }
 
     private void onNotificationClicked(String data) {
-        if (data != null) {
-            String js = "setTimeout('geofence.onNotificationClicked(" + data + ")',0)";
-            sendJavascript(js);
+        if (data == null || data.isEmpty()) {
+            return;
         }
+        try {
+            new JSONTokener(data).nextValue();
+        } catch (JSONException e) {
+            Log.e(TAG, "Ignoring invalid geofence.notification.data", e);
+            return;
+        }
+        sendJavascript(buildSafeCallbackJs("geofence.onNotificationClicked", data));
+    }
+
+    /**
+     * Builds JS that passes payload as data (via JSON.parse), never as eval'd code.
+     * JSONObject.quote() escapes the payload for a JS string literal.
+     */
+    private static String buildSafeCallbackJs(String functionName, String jsonPayload) {
+        return "setTimeout(function(){ " + functionName + "(JSON.parse("
+            + JSONObject.quote(jsonPayload) + ")); }, 0);";
     }
 
     private void initialize(CallbackContext callbackContext) {
@@ -197,16 +219,27 @@ public class GeofencePlugin extends CordovaPlugin {
     }
 
     private static synchronized void sendJavascript(final String js) {
-
         if (webView == null) {
             Log.e(TAG, "Device isn't ready.");
             return;
         }
 
         final CordovaWebView view = webView.get();
+        if (view == null) {
+            Log.e(TAG, "Device isn't ready.");
+            return;
+        }
 
-        ((Activity)(view.getContext())).runOnUiThread(new Runnable() {
+        Context viewContext = view.getContext();
+        if (!(viewContext instanceof Activity)) {
+            Log.e(TAG, "WebView context is not an Activity.");
+            return;
+        }
+
+        ((Activity) viewContext).runOnUiThread(new Runnable() {
             public void run() {
+                // CordovaWebView may not expose evaluateJavascript on older cordova-android;
+                // payload is already safely quoted via buildSafeCallbackJs().
                 view.loadUrl("javascript:" + js);
             }
         });

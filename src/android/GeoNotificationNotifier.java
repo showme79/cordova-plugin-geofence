@@ -59,11 +59,17 @@ public class GeoNotificationNotifier {
 
             resultIntent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
 
+            int pendingIntentFlags = PendingIntent.FLAG_UPDATE_CURRENT;
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+                // Extras are baked in at creation time; immutable prevents later tampering.
+                pendingIntentFlags |= PendingIntent.FLAG_IMMUTABLE;
+            }
+
             PendingIntent resultPendingIntent =
                     PendingIntent.getActivity(context,
                             notification.id,
                             resultIntent,
-                            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_MUTABLE
+                            pendingIntentFlags
                     );
 
             mBuilder.setContentIntent(resultPendingIntent);
